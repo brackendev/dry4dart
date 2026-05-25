@@ -1,0 +1,13 @@
+# Dart tool output and build artifacts
+.dart_tool/
+.packages
+build/
+
+# Resolved dependency versions. For library packages published to pub.dev,
+# the convention is to leave this out of version control.
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
