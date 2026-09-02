@@ -1,6 +1,6 @@
 name: dry4dart
 description: Finds candidate duplicate Dart code across files and directories using structural fingerprints and Jaccard similarity.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/brackendev/dry4dart
 
 topics:
@@ -11,13 +11,13 @@ topics:
   - dart
 
 environment:
-  sdk: ^3.9.0
+  sdk: ^3.11.0
 
 executables:
   dry4dart:
 
 dependencies:
-  analyzer: '>=9.0.0 <11.0.0'
+  analyzer: '>=13.1.0 <15.0.0'
   args: ^2.5.0
   path: ^1.9.0
 

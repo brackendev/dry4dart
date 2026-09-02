@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
@@ -21,6 +19,7 @@ class FileParse {
   final List<String> errors;
 }
 
+/// Parses [source] and extracts the declarations dry4dart compares.
 FileParse parseDartSource(String source, String path) {
   final result = parseString(
     content: source,
@@ -50,7 +49,6 @@ Iterable<AstNode> _extractComparableDeclarations(CompilationUnit unit) sync* {
         decl is MixinDeclaration ||
         decl is ExtensionDeclaration ||
         decl is EnumDeclaration ||
-        // ignore: experimental_member_use
         decl is ExtensionTypeDeclaration) {
       yield* _classLikeMembers(decl);
     }
@@ -62,6 +60,7 @@ Iterable<AstNode> _classLikeMembers(CompilationUnitMember decl) sync* {
   for (final member in members) {
     if (member is MethodDeclaration ||
         member is ConstructorDeclaration ||
+        member is PrimaryConstructorBody ||
         member is FieldDeclaration) {
       yield member;
     }
@@ -69,12 +68,11 @@ Iterable<AstNode> _classLikeMembers(CompilationUnitMember decl) sync* {
 }
 
 List<ClassMember> _membersOf(CompilationUnitMember decl) {
-  if (decl is ClassDeclaration) return decl.members;
-  if (decl is MixinDeclaration) return decl.members;
-  if (decl is ExtensionDeclaration) return decl.members;
-  if (decl is EnumDeclaration) return decl.members;
-  // ignore: experimental_member_use
-  if (decl is ExtensionTypeDeclaration) return decl.members;
+  if (decl is ClassDeclaration) return decl.body.members;
+  if (decl is MixinDeclaration) return decl.body.members;
+  if (decl is ExtensionDeclaration) return decl.body.members;
+  if (decl is EnumDeclaration) return decl.body.members;
+  if (decl is ExtensionTypeDeclaration) return decl.body.members;
   return const [];
 }
 
@@ -100,6 +98,20 @@ class _Normalizer {
     }
     if (node is ConstructorDeclaration) {
       final children = <NormalizedNode>[visit(node.parameters)];
+      for (final init in node.initializers) {
+        children.add(visit(init));
+      }
+      children.add(visit(node.body));
+      return NormalizedNode('constructor-decl', children: children);
+    }
+    if (node is PrimaryConstructorBody) {
+      // Mirror the constructor-decl shape so a primary constructor body
+      // compares against an equivalent classic constructor.
+      final children = <NormalizedNode>[];
+      final declaration = node.declaration;
+      if (declaration != null) {
+        children.add(visit(declaration.formalParameters));
+      }
       for (final init in node.initializers) {
         children.add(visit(init));
       }
@@ -332,11 +344,18 @@ class _Normalizer {
         children: node.arguments.map(visit).toList(),
       );
     }
-    if (node is NamedExpression) {
+    if (node is NamedArgument) {
       return NormalizedNode(
         'named-arg',
-        label: node.name.label.name,
-        children: [visit(node.expression)],
+        label: node.name.lexeme,
+        children: [visit(node.argumentExpression)],
+      );
+    }
+    if (node is RecordLiteralNamedField) {
+      return NormalizedNode(
+        'named-arg',
+        label: node.name.lexeme,
+        children: [visit(node.fieldExpression)],
       );
     }
     if (node is ParenthesizedExpression) {
@@ -415,20 +434,20 @@ class _Normalizer {
 
   NormalizedNode _formalParameter(FormalParameter p) {
     final children = <NormalizedNode>[];
-    if (p is SimpleFormalParameter) {
-      if (p.type != null) children.add(visit(p.type!));
-    } else if (p is FieldFormalParameter) {
-      if (p.type != null) children.add(visit(p.type!));
-    } else if (p is FunctionTypedFormalParameter) {
-      if (p.returnType != null) children.add(visit(p.returnType!));
-      children.add(visit(p.parameters));
-    } else if (p is DefaultFormalParameter) {
-      children.add(_formalParameter(p.parameter));
-      if (p.defaultValue != null) children.add(visit(p.defaultValue!));
-    } else if (p is SuperFormalParameter) {
-      if (p.type != null) children.add(visit(p.type!));
-    }
-    return NormalizedNode('param', children: children);
+    if (p.type != null) children.add(visit(p.type!));
+    final suffix = p.functionTypedSuffix;
+    if (suffix != null) children.add(visit(suffix.formalParameters));
+    final param = NormalizedNode('param', children: children);
+    final isDelimited = p.isNamed || p.isOptionalPositional;
+    if (!isDelimited) return param;
+    // Analyzer versions before 13 wrapped every parameter declared inside
+    // `{}` or `[]` in a separate DefaultFormalParameter node, whether or not
+    // it had a default value. Keep that shape so fingerprints stay stable.
+    final defaultClause = p.defaultClause;
+    return NormalizedNode(
+      'param',
+      children: [param, if (defaultClause != null) visit(defaultClause.value)],
+    );
   }
 
   String _constructorLabel(ConstructorName name) {

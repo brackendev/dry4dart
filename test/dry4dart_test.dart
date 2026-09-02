@@ -31,6 +31,21 @@ void main() {
     );
   }
 
+  test(
+    'runCli --version prints the version declared in pubspec.yaml',
+    () async {
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      final declared = RegExp(
+        r'^version:\s*(\S+)\s*$',
+        multiLine: true,
+      ).firstMatch(pubspec)!.group(1);
+      final result = await runWithCapture(['--version']);
+      expect(result.code, equals(0));
+      expect(result.err, isEmpty);
+      expect(result.out, equals('dry4dart $declared\n'));
+    },
+  );
+
   test('runCli reports a usage error when no paths are provided', () async {
     final result = await runWithCapture(const []);
     expect(result.code, equals(64));
@@ -57,6 +72,63 @@ void main() {
     ]);
     expect(result.code, equals(64));
     expect(result.err, contains('conflicts'));
+  });
+
+  test('runCli reports functions that differ only in names, defaults, and '
+      'argument values', () async {
+    File('${tmp.path}/a.dart').writeAsStringSync('''
+int total({int start = 0, int step = 1}) {
+  final sum = combine(start, step, scale: 2);
+  return sum + 1;
+}
+''');
+    File('${tmp.path}/b.dart').writeAsStringSync('''
+int subtotal({int base = 10, int delta = 5}) {
+  final result = combine(base, delta, scale: 3);
+  return result + 2;
+}
+''');
+    final result = await runWithCapture([
+      '--min-nodes',
+      '1',
+      '--min-lines',
+      '1',
+      tmp.path,
+    ]);
+    expect(result.code, equals(0));
+    expect(result.err, isEmpty);
+    expect(result.out, startsWith('DUPLICATE score=1.0'));
+    expect(result.out, contains('a.dart:1-4'));
+    expect(result.out, contains('b.dart:1-4'));
+  });
+
+  test('runCli compares primary constructor bodies across files', () async {
+    File('${tmp.path}/a.dart').writeAsStringSync('''
+class Point(final int x, final int y) {
+  this : assert(x >= 0) {
+    print(x + y);
+  }
+}
+''');
+    File('${tmp.path}/b.dart').writeAsStringSync('''
+class Size(final int width, final int height) {
+  this : assert(width >= 1) {
+    print(width + height);
+  }
+}
+''');
+    final result = await runWithCapture([
+      '--min-nodes',
+      '1',
+      '--min-lines',
+      '1',
+      tmp.path,
+    ]);
+    expect(result.code, equals(0));
+    expect(result.err, isEmpty);
+    expect(result.out, startsWith('DUPLICATE score=1.0'));
+    expect(result.out, contains('a.dart:2-4'));
+    expect(result.out, contains('b.dart:2-4'));
   });
 
   test('runCli warns on parse errors and continues', () async {

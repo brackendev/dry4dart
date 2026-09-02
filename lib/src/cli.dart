@@ -11,7 +11,7 @@ import 'normalize.dart';
 import 'report.dart';
 
 // Must be kept in sync with the version field in pubspec.yaml.
-const _version = '0.1.0';
+const _version = '0.2.0';
 
 /// Runs the dry4dart pipeline against [arguments] and returns a process exit
 /// code.

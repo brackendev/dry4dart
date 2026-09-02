@@ -40,10 +40,10 @@ Scores below `1.0` reflect smaller divergences. Two functions that match except 
 
 ## Installation
 
-Install dry4dart as a development dependency so each project pins the tool version and resolves `analyzer` against the same constraints as the project itself.
+dry4dart is not published on pub.dev. Install it from the Git repository as a development dependency so each project pins the tool and resolves `analyzer` against the same constraints as the project itself.
 
 ```bash
-dart pub add --dev dry4dart
+dart pub add --dev dry4dart --git-url https://github.com/brackendev/dry4dart.git --git-ref master
 dart run dry4dart lib
 ```
 
@@ -51,15 +51,18 @@ dart run dry4dart lib
 
 ```yaml
 dev_dependencies:
-  dry4dart: ^0.1.0
+  dry4dart:
+    git:
+      url: https://github.com/brackendev/dry4dart.git
+      ref: master
 ```
 
-dry4dart depends on `package:analyzer` to parse Dart source. Because analyzer changes its public syntax tree across major versions, dry4dart supports a bounded analyzer range. See the pub.dev package page for the current constraint if dependency resolution fails in a project that already pins analyzer indirectly.
+dry4dart requires Dart 3.11 or later. It depends on `package:analyzer` to parse Dart source. Because analyzer changes its public syntax tree across major versions, dry4dart supports a bounded analyzer range, currently 13.1.0 through 14.x. See `pubspec.yaml` in this repository for the current constraint if dependency resolution fails in a project that already pins analyzer indirectly.
 
 For ad-hoc scans where a development dependency is impractical, install dry4dart globally. A globally installed `analyzer` may not match the project being scanned, which can cause newer language features to misparse.
 
 ```bash
-dart pub global activate dry4dart
+dart pub global activate --source git https://github.com/brackendev/dry4dart.git --git-ref master
 dry4dart lib
 ```
 

@@ -1,6 +1,8 @@
 import 'normalize.dart';
 
-const fingerprintAlgorithmVersion = 1;
+// Version 2 corresponds to the analyzer 13 syntax tree, in which a labeled
+// statement no longer carries an identifier node for its label.
+const fingerprintAlgorithmVersion = 2;
 
 class FingerprintResult {
   FingerprintResult(this.fingerprints, this.nodeCount);

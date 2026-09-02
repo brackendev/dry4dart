@@ -4,7 +4,7 @@ dry4dart is a command-line tool. The examples below cover the most common
 invocations after adding the package as a development dependency:
 
 ```bash
-dart pub add --dev dry4dart
+dart pub add --dev dry4dart --git-url https://github.com/brackendev/dry4dart.git --git-ref master
 ```
 
 ## Scan a directory
